@@ -15,9 +15,13 @@ from typing import List, Dict, Optional
 
 import numpy as np
 import faiss
-from sentence_transformers import SentenceTransformer
 
 from .config import PipelineConfig, DEFAULT_CONFIG
+
+try:
+    from sentence_transformers import SentenceTransformer
+except Exception:  # pragma: no cover - runtime dependency may be unavailable in some environments
+    SentenceTransformer = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -42,19 +46,24 @@ class VectorStore:
     # ── Lazy model load ───────────────────────────────────────────────────
 
     @property
-    def model(self) -> SentenceTransformer:
+    def model(self):
         if self._model is None:
             logger.info("Loading embedding model '%s'...", self.config.embedding_model)
             self._model = self.load_model_fast(self.config.embedding_model)
         return self._model
 
     @staticmethod
-    def load_model_fast(model_name: str) -> SentenceTransformer:
+    def load_model_fast(model_name: str):
         """
         Load a cached SentenceTransformer without a Hugging Face Hub round-trip.
 
         force offline mode and only fall back to an online load if the model isn't cached yet.
         """
+        if SentenceTransformer is None:
+            raise RuntimeError(
+                "sentence-transformers is not available in this environment. "
+                "Install the project dependencies to use the vector store."
+            )
         os.environ.setdefault("HF_HUB_OFFLINE", "1")
         os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
         try:

@@ -144,7 +144,7 @@ class AnswerGenerator:
             raise   # let caller handle — unrecoverable without a valid key
         except groq.APIError as exc:
             logger.error("LLM API error: %s", exc)
-            return self._fallback_response(chunks, str(exc))
+            return self.fallback_response(chunks, str(exc))
 
     # ── Helpers ───────────────────────────────────────────────────────────
 
