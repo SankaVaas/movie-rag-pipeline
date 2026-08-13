@@ -45,8 +45,25 @@ class VectorStore:
     def model(self) -> SentenceTransformer:
         if self._model is None:
             logger.info("Loading embedding model '%s'...", self.config.embedding_model)
-            self._model = SentenceTransformer(self.config.embedding_model)
+            self._model = self.load_model_fast(self.config.embedding_model)
         return self._model
+
+    @staticmethod
+    def load_model_fast(model_name: str) -> SentenceTransformer:
+        """
+        Load a cached SentenceTransformer without a Hugging Face Hub round-trip.
+
+        force offline mode and only fall back to an online load if the model isn't cached yet.
+        """
+        os.environ.setdefault("HF_HUB_OFFLINE", "1")
+        os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+        try:
+            return SentenceTransformer(model_name)
+        except Exception:
+            logger.info("Model not cached locally yet — downloading '%s'...", model_name)
+            os.environ.pop("HF_HUB_OFFLINE", None)
+            os.environ.pop("TRANSFORMERS_OFFLINE", None)
+            return SentenceTransformer(model_name)
 
     # ── Build ─────────────────────────────────────────────────────────────
 
@@ -80,7 +97,7 @@ class VectorStore:
         vecs = self.model.encode(
             texts,
             batch_size=self.config.embed_batch_size,
-            show_progress_bar=True,
+            show_progress_bar=len(texts) > 1,   # skip bar overhead for single-query encodes
             convert_to_numpy=True,
         ).astype(np.float32)
         faiss.normalize_L2(vecs)
