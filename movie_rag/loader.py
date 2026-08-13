@@ -49,7 +49,7 @@ def load_movies(config: PipelineConfig = DEFAULT_CONFIG) -> pd.DataFrame:
             Title=lambda d: d["Title"].str.strip(),
             Plot=lambda d:  d["Plot"].str.strip(),
         )
-        .query("Plot.str.len() >= 100")   # skip trivially short plots
+        .query("Plot.str.len() >= 500")   # skip trivially short plots
         .iloc[:config.dataset_rows]
         .reset_index(drop=True)
     )

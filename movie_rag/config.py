@@ -11,7 +11,7 @@ from typing import Optional
 @dataclass(frozen=True)
 class PipelineConfig:
     # ── Data ──────────────────────────────────────────────────────────────
-    dataset_rows: int   = 10000       # rows loaded from CSV
+    dataset_rows: int   = 1000        # rows loaded from CSV
     csv_path: str       = "wiki_movie_plots_deduped.csv"
     index_path: str     = "movie_index"   # prefix; .faiss + .meta.json appended
 
@@ -28,7 +28,7 @@ class PipelineConfig:
     min_score: float    = 0.20      # cosine similarity floor — reject irrelevant chunks
 
     # ── Generation ────────────────────────────────────────────────────────
-    llm_model: str      = "claude-sonnet-4-6"
+    llm_model: str      = "llama-3.3-70b-versatile"
     max_tokens: int     = 1024
     temperature: float  = 0.2       # low temp for factual, grounded answers
 
