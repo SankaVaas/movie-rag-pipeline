@@ -2,7 +2,7 @@
 generator.py - LLM answer generation with structured JSON output.
 
   - Format retrieved chunks into a clean context block
-  - Call OpenAI with a precise system prompt
+  - Call Groq with a precise system prompt
   - Parse and validate the structured JSON response
   - Return a typed RAGResponse dataclass
   - Handle LLM failures gracefully with a fallback response
@@ -14,7 +14,7 @@ import textwrap
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 
-import openai
+import groq
 
 from .config import PipelineConfig, DEFAULT_CONFIG
 from .safety import truncate_context
@@ -83,17 +83,17 @@ _SYSTEM_PROMPT = textwrap.dedent("""
 # ---------------------------------------------------------------------------
 
 class AnswerGenerator:
-    """Calls the LLM and returns a validated RAGResponse."""
+    """Calls the Groq API and returns a validated RAGResponse."""
 
     def __init__(self, config: PipelineConfig = DEFAULT_CONFIG):
         self.config = config
-        self._client: Optional[openai.OpenAI] = None
+        self._client: Optional[groq.Groq] = None
 
     @property
-    def client(self) -> openai.OpenAI:
+    def client(self) -> groq.Groq:
         if self._client is None:
-            # Raises openai.AuthenticationError if key is missing/invalid
-            self._client = openai.OpenAI()
+            # Raises groq.AuthenticationError if GROQ_API_KEY is missing/invalid
+            self._client = groq.Groq()
         return self._client
 
     def generate(self, query: str, chunks: List[Dict]) -> RAGResponse:
@@ -140,9 +140,9 @@ class AnswerGenerator:
             logger.debug("Raw LLM response: %s", raw[:200])
             return self._parse_response(raw, chunks)
 
-        except openai.AuthenticationError:
+        except groq.AuthenticationError:
             raise   # let caller handle — unrecoverable without a valid key
-        except openai.APIError as exc:
+        except groq.APIError as exc:
             logger.error("LLM API error: %s", exc)
             return self._fallback_response(chunks, str(exc))
 
@@ -164,7 +164,7 @@ class AnswerGenerator:
                 break
         return "\n\n".join(parts)
 
-    def parse_response(self, raw: str, chunks: List[Dict]) -> RAGResponse:
+    def _parse_response(self, raw: str, chunks: List[Dict]) -> RAGResponse:
         """Parse LLM JSON output into RAGResponse. Falls back gracefully."""
         try:
             data = json.loads(raw)
