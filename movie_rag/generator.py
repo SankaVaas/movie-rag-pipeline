@@ -2,7 +2,7 @@
 generator.py - LLM answer generation with structured JSON output.
 
   - Format retrieved chunks into a clean context block
-  - Call Claude with a precise system prompt
+  - Call OpenAI with a precise system prompt
   - Parse and validate the structured JSON response
   - Return a typed RAGResponse dataclass
   - Handle LLM failures gracefully with a fallback response
@@ -14,7 +14,7 @@ import textwrap
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 
-import anthropic
+import openai
 
 from .config import PipelineConfig, DEFAULT_CONFIG
 from .safety import truncate_context
@@ -87,13 +87,13 @@ class AnswerGenerator:
 
     def __init__(self, config: PipelineConfig = DEFAULT_CONFIG):
         self.config = config
-        self._client: Optional[anthropic.Anthropic] = None
+        self._client: Optional[openai.OpenAI] = None
 
     @property
-    def client(self) -> anthropic.Anthropic:
+    def client(self) -> openai.OpenAI:
         if self._client is None:
-            # Raises AuthenticationError if key is missing/invalid
-            self._client = anthropic.Anthropic()
+            # Raises openai.AuthenticationError if key is missing/invalid
+            self._client = openai.OpenAI()
         return self._client
 
     def generate(self, query: str, chunks: List[Dict]) -> RAGResponse:
@@ -115,7 +115,7 @@ class AnswerGenerator:
                 sources=[],
             )
 
-        context_block = self.build_context(chunks)
+        context_block = self._build_context(chunks)
         user_message  = f"Question: {query}\n\nRetrieved context:\n{context_block}"
 
         logger.info(
@@ -126,26 +126,29 @@ class AnswerGenerator:
         )
 
         try:
-            message = self.client.messages.create(
+            response = self.client.chat.completions.create(
                 model=self.config.llm_model,
                 max_tokens=self.config.max_tokens,
                 temperature=self.config.temperature,
-                system=_SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": user_message}],
+                response_format={"type": "json_object"},
+                messages=[
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user", "content": user_message},
+                ],
             )
-            raw = message.content[0].text.strip()
+            raw = response.choices[0].message.content.strip()
             logger.debug("Raw LLM response: %s", raw[:200])
-            return self.parse_response(raw, chunks)
+            return self._parse_response(raw, chunks)
 
-        except anthropic.AuthenticationError:
+        except openai.AuthenticationError:
             raise   # let caller handle — unrecoverable without a valid key
-        except anthropic.APIError as exc:
+        except openai.APIError as exc:
             logger.error("LLM API error: %s", exc)
-            return self.fallback_response(chunks, str(exc))
+            return self._fallback_response(chunks, str(exc))
 
     # ── Helpers ───────────────────────────────────────────────────────────
 
-    def build_context(self, chunks: List[Dict]) -> str:
+    def _build_context(self, chunks: List[Dict]) -> str:
         """Format retrieved chunks into a numbered context block."""
         parts = []
         total = 0

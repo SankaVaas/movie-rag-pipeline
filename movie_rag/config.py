@@ -28,7 +28,7 @@ class PipelineConfig:
     min_score: float    = 0.20      # cosine similarity floor — reject irrelevant chunks
 
     # ── Generation ────────────────────────────────────────────────────────
-    llm_model: str      = "claude-sonnet-4-6"
+    llm_model: str      = "gpt-4o-mini"
     max_tokens: int     = 1024
     temperature: float  = 0.2       # low temp for factual, grounded answers
 

@@ -5,3 +5,4 @@ pandas>=2.0.0
 numpy>=1.24.0
 datasets>=2.14.0      # fallback auto-download only
 pytest>=7.4.0         # for running tests
+openai>=1.30.0
