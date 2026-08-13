@@ -38,7 +38,7 @@ def _setup_logging(verbose: bool) -> None:
     )
     # Suppress noisy third-party loggers unless verbose
     if not verbose:
-        for noisy in ("sentence_transformers", "transformers", "huggingface_hub", "faiss"):
+        for noisy in ("sentence_transformers", "transformers", "huggingface_hub", "faiss", "httpx", "httpcore"):
             logging.getLogger(noisy).setLevel(logging.WARNING)
 
 
